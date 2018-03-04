@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Git conflict resolution tutorial</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+</head>
+<body>
+<h1>Git conflict resolution tutorial</h1>
+
+<p>by Isaac Reynolds and Michael Ernst</p>
+
+<h1>What is a conflict?</h1>
+
+<p>
+This tutorial helps you to learn how to handle a merge conflict in git.
+It's smart to practice conflict resolution ahead of time, rather than when
+you are busy with a real project.
+</p>
+
+<p>A core feature of version control is managing many developers' concurrent edits to a single codebase. Several people start with the same version of the codebase, make edits to it independently, and then push those edits to the central repository. The version control system "merges" these several edits to make a single, new, consistent codebase. </p>
+
+<p>Recall that in the commit log, commits form a <a href="https://en.wikipedia.org/wiki/Directed_acyclic_graph">directed acyclic graph</a>. Most commits have exactly one parent commit, which immediately precedes it. However, a "merge" commit (the result of a merge) has several parents &mdash; typically one for each developer whose work is being merged. Here's an example, with more recent commits at the top just as Git prints them:</p>
+
+<p><img src="images/image02.png" alt="History with merge"/></p>
+
+<p>How does the version control system merge files? If different people work on different files, then the merge is simple &mdash; the system merely takes the edited version of every modified file. (This is a common project management strategy!)</p>
+
+<p>If several people work on different sections of the same file, then the merge may still be possible &mdash; the system creates a new file with the updated sections from each developer.</p>
+
+<p>However, sometimes two people edit the same line of code. The system doesn't know which one to accept. It presents this to you as a "merge conflict". The rest of this document tells you how to deal with merge conflicts. A conflict is always the result of a failed automated merge.</p>
+
+<p>This document only addresses two-way merges.  Some version control systems, including Git, allow N-way merges that attempt to merge more than two commits. This increases the complexity of the merge, but the strategy for resolving conflicts is the same.</p>
+
+<h1>Let's cause a conflict! It'll be fun!</h1>
+
+<p>Suppose that you are Abraham Lincoln's private assistant, and both of you have made changes to his first draft of the Gettysburg Address. He has made major content changes, and you've made some minor grammar changes. </p>
+
+<p>To set up your version control system for this scenario, run:
+</p>
+
+<pre>./conflict.sh
+cd tutorial-repos/local</pre>
+
+<p>
+This creates a new clone <code>tutorial-repos/local/</code> where you have been making your edits.  (Abraham Lincoln has been editing in his own clone of the repository, and unfortunately those edits conflict with yours.)
+</p>
+
+
+<h1>Yep, that's a conflict &mdash; let's make sure</h1>
+
+<p>
+Attempt to incorporate Abraham Lincoln's changes into your clone:
+</p>
+
+<pre>
+git pull
+</pre>
+
+<p>When you run pull in your repository to get Lincoln's changes, Git tries to automatically merge his version into yours.  In this case it is unable to do so, and it outputs:</p>
+
+<pre><code>    Auto-merging gettysburg_address.txt
+    CONFLICT (content): Merge conflict in gettysburg_address.txt
+    Automatic merge failed; fix conflicts and then commit the result.
+</code></pre>
+
+<p>To see the status of all files in the repository (including which conflicts you've already resolved and which ones remain unresolved), run
+</p>
+
+<pre>
+git pull
+</pre>
+
+<p>
+This repository has a conflict in only one file; Git outputs:
+</p>
+
+<pre><code>    ...
+    You have unmerged paths.
+      (fix conflicts and run "git commit")
+      (use "git merge --abort" to abort the merge)
+
+    Unmerged paths:
+      (use "git add &lt;file&gt;..." to mark resolution)
+
+
+            both modified:      gettysburg-address.txt
+    ...
+</code></pre>
+
+<p>Examine file <code>gettysburg-address.txt</code>, in an editor or by running 
+<code>cat gettysburg-address.txt</code>.  It contains conflict markers (<code>&lt;&lt;&lt;&lt;&lt;&lt;&lt;</code>, <code>||||||||||</code>,  <code>==========</code>, <code>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;</code>) that show the locations of conflicts.  (The below shows line numbers for convenience; they are not in the actual file.)</p>
+
+<pre><code>    1: Four score and seven years ago our fathers brought forth,
+       &lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD
+   2a: upon this continent a new nation conceived in liberty, and
+       ||||||| merged common ancestors
+   2b: upon this continent, a new nation, conceived in liberty, and
+       =======
+   2c: on this continent, a new nation, conceived in Liberty, and
+       &gt;&gt;&gt;&gt;&gt;&gt;&gt; 03bd6c346eeb208332e7176453d015174f5bf654
+    3: dedicated to the proposition that all men are created equal.
+    ...
+</code></pre>
+
+<p>Line 2 is in conflict, but lines 1 and 3 are not.</p>
+<ul>
+  <li>Your version is line 2a, which begins with "upon this" and is from the <a href="http://git-scm.com/book/en/Git-Internals-Git-References#The-HEAD"><code>HEAD</code></a> commit (the latest local commit).</li>
+  <li>Line 2b is the ancestor &mdash; the version that you and Abe each started from when making your edits.</li>
+  <li>Abe's version is line 2c, which begins with "on this" and is from the <a href="http://git-scm.com/book/en/Git-Basics-Working-with-Remotes">remote</a> commit with <a href="http://git-scm.com/book/en/Git-Tools-Revision-Selection">identifier</a> 03bd6c34.  (You can identify a commit by just the first few hexadecimal digits in its commit id.)
+  </li>
+</ul>
+
+<p>Lines 1 and 3 aren't in conflict because either (a) neither commit modified those lines or (b) Git successfully merged them automatically. In most merges, the overwhelming majority of edits are merged automatically and only a few need manual attention.</p>
+
+<h1>Before we start: what's my goal?</h1>
+
+<p>Git tracks conflict status for each file, and prevents you from committing files that are marked as conflicted. To clear the conflicted state, you need to make edits to that file and then <a href="http://git-scm.com/book/en/Getting-Started-Git-Basics#The-Three-States">stage</a> that file by running the <a href="http://git-scm.com/docs/git-add">add</a> command. If you make mistakes, you can abort the merge completely and start over by running <code>git merge --abort</code>.</p>
+
+<p>The general strategy for resolving a merge conflict is to edit the file so that (a) the distinctive conflict markers are gone and (b) the logic from both commits is preserved as intended. </p>
+
+<p>Preserving the logic is the more difficult task, because it requires knowledge of another commit's intent and functionality. This is one reason we write unit tests! If the unit tests are good, then you should be able to prove you've preserved the other commit's logic by running the relevant tests.</p>
+
+<p>Resolving a conflict in a file is more complex than simply accepting the remote or local version. Typically you will want to compare the local, remote, and common ancestor and choose a specific combination of all three. </p>
+
+<p>The following sections detail various tools and methods for resolving conflicts. The most direct way is to resolve the conflicts in your favorite text editor, but there are also graphical tools you can use (including OpenDiff on Mac, KDiff on Linux, and EMerge and VimDiff on any platform).</p>
+
+<h1>Resolving conflicts with a text editor</h1>
+
+<p>Editing the file is the most flexible way of resolving merge conflicts, and is the only way to resolve some merge conflicts.  It uses tools you already know, and most programming editors have special support for resolving merge conflicts.  However, editing the file can be confusing because the conflict markers interrupt the text and make it hard to discern the text's original intent. It's important to learn this method before using any graphical tools (which are discussed below).</p>
+
+<p>The first step is to open the file in a text editor and modify it so that it captures both edits.  For line 2, you removed the commas, and Abe changed "upon" to "on" and capitalized "liberty".
+You'll have to ensure that only one version of line 2 exists, and remove all of the conflict markers (lines inserted by Git starting with <code>&lt;&lt;&lt;&lt;&lt;&lt;&lt;</code>, <code>=======</code>, or <code>&gt;&gt;&gt;&gt;&gt;&gt;&gt;</code>).  Do the same for all the conflicts in the file.</p>
+
+<p>Be careful when you resolve conflicts! The resulting file must be syntactically and semantically correct. Once the file is correct, save it and close the editor.</p>
+
+<p>After saving a new, correct version of the file, add it to the <a href="http://gitready.com/beginner/2009/01/18/the-staging-area.html">staging area</a> and then <a href="http://git-scm.com/docs/git-commit">commit</a> it. For merge commits, Git proposes a default commit message.  You can accept the default, or you can write your own, more descriptive message. In this case, use the message "Apply grammar edits to final draft".</p>
+
+<pre><code>    $ git add gettysburg-address.txt
+    $ git commit 
+    Apply grammar edits to final draft
+
+    Conflicts:
+            gettysburg-address.txt
+    #
+    # It looks like you may be committing a merge.
+    ...
+</code></pre>
+
+<p>Reviewing the <a href="http://git-scm.com/docs/git-log">log</a> now, you can see that it follows a "diamond" shape (the latest commit has two parents, both of which had the same parent).</p>
+
+<pre><code>    $ git log --oneline --graph
+    *   d75cf7e Apply grammar edits to final draft
+    |\
+    | * 247b7c3 Add final draft of my address
+    * | 56c2f97 Make grammar edits to the address
+    |/
+    * 10f2157 Add first draft of my address
+</code></pre>
+
+<p>Now you've successfully resolved a merge conflict!</p>
+
+<h1>Resolving conflicts with a graphical merge tool</h1>
+
+<p>The following command opens some tool (you can configure Git to override its default) that allows you to find, understand, and resolve conflicts.</p>
+
+<pre><code>    $ git mergetool    # [-t TOOL]
+</code></pre>
+
+<p>The merge tool is useful for <em>understanding</em> the intent of both commits, but can be confusing to use to <em>resolve</em> conflicts.  You might want to use a text editor to resolve the conflicts, allowing you to do more than just accepting the remote or local (and these are the main options a graphical tool presents).  Even as you modify the file in a text editor, leave the merge tool open to help you find and understand the remaining conflicts.  You can close and re-open the tool at any time. Remember that the merge isn't final until you commit!</p>
+
+<p>As noted above, your text editor probably does everything that other merge tools do (including highlighting, 3 or 4 windows for different versions, etc.).  Learning that functionality is like learning a merge tool; see your editor's documentation.</p>
+
+<p>Diagrams below are presented as an overview. Don't worry about reading the text in the diagrams carefully &mdash; it's better for you to run <a href="http://git-scm.com/docs/git-mergetool"><code>mergetool</code></a> on your own computer and follow along.</p>
+
+<h1>KDiff (Linux)</h1>
+
+<p>KDiff is a popular merge tool on Linux (shown below). Unlike OpenDiff, it shows four panes of text: one (top left) for the <a href="http://git-scm.com/docs/git-merge-base"><code>BASE</code></a> or common ancestor commit, another (top middle) for the local commit, a third (top right) for the remote commit, and a fourth (on bottom) for the output. As a side note, remember to verify which pane is which in your particular merge tool &mdash; even two tools that show four panes might show different versions in each pane.</p>
+
+<p>KDiff is showing three panes (it includes the original, <code>BASE</code>, commit), so this is really a three-way merge.</p>
+
+<p>It will also show you where the conflicts are and let you choose, for each conflict, which code to place into the output pane. You'll do this by clicking a button in the UI with the number of the pane from which you want to take the code. You can take code from multiple panels in any order by clicking multiple the buttons for multiple panes.</p>
+
+<p>KDiff also allows you to scroll back and forth between conflicts and manually edit the contents of the output pane. It's a very good conflict resolution tool if you know how to use it! </p>
+
+<p><img src="images/image04.png" style="width:1024px" alt="KDiff example" /></p>
+
+
+<h2>OpenDiff (Mac)</h2>
+
+<p>Here is what OpenDiff looks like. You can see from the titles on each pane that the left one is the local version and the right is the remote version.  (Unfortunately, it does not show the ancestor version, like all the other tools do.)</p>
+
+<p>It highlights in blue differences within each conflicting line, and highlights in gray groups of conflicting lines. The currently-selected conflict group is outlined in red.</p>
+
+<p><img src="images/image00.png" style="width:1024px" alt="OpenDiff example"/></p>
+
+<p>At this point, you will notice the options provided at the bottom right. You'll use this dropdown menu to describe how to resolve the currently-selected conflict. In the first case, you can choose to accept either the left or the right. </p>
+
+<p><img src="images/image01.png" style="width:1024px" alt="OpenDiff actions"/></p>
+
+<p>After selecting a particular option, you can choose another conflict and resolve it in the same way. </p>
+
+<p>However, the other conflicts are more complicated; none of options in the dropdown menu describe how to resolve this conflict. In this case, you'll have to open the file in a text editor and merge them manually (you'll probably end up with some combination of both the remote and the local, or neither).</p>
+
+
+<h1>EDiff, VimDiff (platform-independent)</h1>
+
+<p>These are special multi-pane views in Emacs and Vim, respectively. They're complicated, and not recommended unless you're a serious Emacs or Vim user. I'd recommend manually resolving the conflicts using your favorite text editor or using a graphical tool (such as OpenDiff, above).</p>
+
+<p>If they pop up unexpectedly in all their three- or four-pane glory, just close them. You can close Emacs with "CTRL-X, CTRL-C" and Vim by hitting Escape, typing ":q!", and then hitting Enter.</p>
+
+<p>Here's what VimDiff might look like (EDiff looks different but has similar functionality):</p>
+
+<p><img src="images/image03.png" style="width:1024px" alt="VimDiff example" /></p>
+
+<p>As in other graphical editors, you can see the local commit on the left pane, the <code>BASE</code> (common parent) in the middle, the remote on the right, and the output below. Note that this is a different order than KDiff!</p>
+
+<h1>Did I screw something up?</h1>
+
+<p>If you want to know if you resolved the conflicts correctly, the quick and easy answer is: write and run tests. If every commit includes both code and a test for that code, then you can test the correctness of any merge by running the tests. Otherwise, you'll have to verify its correctness through manual testing, talking to the author of the other commit, and inspection.  Do all this <em>before</em> you commit the merge.</p>
+
+<h1>Did Git screw something up? ... Can that happen?</h1>
+
+<p>Oh-my-goodness-yes-that-can-happen. </p>
+
+<p>Here's a story from an internship. I was working on refactoring a module I'd written and pushed already. I ended up removing several large chunks of code and rewriting them differently in a different place. That was fine and normal.</p>
+
+<p>As I was doing that, my co-worker was working on a long-running project. He had his own feature branch to keep his development separate from trunk (the main development branch), exactly as he should. He was also regularly pulling from trunk into his branch so that he stayed up-to-date with the rest of the company's work &mdash; this meant smaller merges, fewer conflicts, and easier conflicts when they appeared. He was doing everything right.</p>
+
+<p>My co-worker updated his branch with the version of the module that I'd already pushed, and then I pushed my update to the module. Soon after, my co-worker merged his feature branch into trunk (possibly without merging trunk into his feature branch again).</p>
+
+<p>In my refactor, there were some places that I added code and some places that I removed it. When the version control software compared the trunk version to the feature branch version, it saw that the trunk had some lines the feature branch didn't (these were the lines I added in the refactor) and the feature branch had some lines the trunk didn't (these were the lines I removed in the refactor). </p>
+
+<p>Our version control was happy to merge these by including all the lines from both trunk and the feature branch. In other words, it added again the lines I'd specifically removed from trunk. </p>
+
+<p>In this case, the modifications were such that the bad merge didn't fail any tests. Later on, when I was reviewing the code again, I was confused to see some lines that I thought I'd removed. On a hunch, I checked the commit logs &mdash; yep, last modified by an automated merge. When something looks funny and it was last modified in a merge, there's a real chance someone (or something) made a mistake.</p>
+
+<p>And that's how any version control system, even operated by carefully and responsibly, can still make a mistake and cause a problem.</p>
+
+<h1>So Git and/or I screwed something up ...</h1>
+
+<p>You've committed (and possibly pushed) a mistake. How do you fix it?</p>
+
+<p>The best strategy, which works in all cases, is: make your corrections and add them to a new commit on top of the faulty merge.</p>
+
+<p>The super-fancy strategy, which can accidentally delete your work, is harder than the strategy above, but can help you save face (if you really think embarrassment is worse than deleting work), is: <a href="http://stackoverflow.com/questions/1338728/how-can-i-delete-a-git-commit">delete the bad merge</a> so that it's like it never existed, <a href="http://git-scm.com/docs/git-merge">re-run the merge</a>, and this time resolve the conflicts correctly. This only works if you haven't pushed the faulty merge (user-friendly version control such as <a href="http://mercurial.selenic.com/wiki/Phases#Available_Phases">Mercurial will prevent</a> you from <a href="https://www.kernel.org/pub/software/scm/git/docs/user-manual.html#problems-With-rewriting-history">rewriting history</a> like this, but Git won't, so be careful!). </p>
+
+<h1>Lets not do that again, shall we?</h1>
+
+<p>How can you avoid as many conflicts as possible?</p>
+
+<p>Push and pull early and often. There are two reasons to commit: first, to save a logical unit of work, and second, to communicate to your team that you're working on a particular section of code. The sooner you notice a conflict, the easier it'll be to fix and the more conflicts you'll avoid in the future. If you haven't pushed or pulled in a few days, you should be feeling nervous!</p>
+
+<p>Don't assign two people to work on the same code at the same time. Assign different people to independent pieces of code.</p>
+
+<p>If you see a conflict, mention it to the other committer. This is the best way to avoid future conflict.  (It's a good general rule that communication resolves conflict.) This tip goes along with the previous one &mdash; if you accidentally start working on the same code, then you should speak up as soon as you figure it out.</p>
+
+<p><a href="http://stackoverflow.com/questions/5509543/how-to-properly-force-a-git-push/16702355#16702355">Avoid the <code>-f</code></a> <a href="http://memegenerator.net/instance/38822568">or <code>--force</code> flags</a>. Using the force flag probably means you're doing something wrong.</p>
+
+<p>Don't just do what Git tells you (seriously). If Git presents a warning or error and suggests a command you can run to fix it, make sure you understand the problem, the message, and what the command will do before you run the suggested command. Usually, the suggested command is not what you want.</p>
+
+<p>Also see <a href="http://homes.cs.washington.edu/~mernst/advice/version-control.html">Michael Ernst's version control best practices</a>, which may save you a lot of pain.</p>
+
+
+<h1>Further Reading</h1>
+
+<p><a href="http://ftp.newartisans.com/pub/git.from.bottom.up.pdf">Learn Git by learning its implementation</a>. Most Git commands are backed up directly by low-level operations on the Git data structures (not much abstraction here!). Learning about how Git is implemented can help you predict Git's behavior and remember its commands.</p>
+
+</body>
+</html>
