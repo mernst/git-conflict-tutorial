@@ -1,4 +1,4 @@
-== Git conflict resulution tutorial
+# Git conflict resolution tutorial #
 
 This tutorial helps you to learn how to handle a merge conflict in git.
 It's smart to practice conflict resolution ahead of time, rather than when
