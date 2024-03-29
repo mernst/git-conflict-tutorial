@@ -40,7 +40,7 @@ you are frazzled by a conflict in a real project.
 
 <h1>Let's cause a conflict! It'll be fun!</h1>
 
-<p>Suppose that you are Abraham Lincoln's private assistant, and both of you have made changes to his first draft of the Gettysburg Address. He has made major content changes, and you've made some minor grammar changes. </p>
+<p>Suppose that you are Abraham Lincoln's private secretary, and both of you have made changes to his first draft of the Gettysburg Address. He has made major content changes, and you've made some minor grammar changes. </p>
 
 <p>To set up your version control system for this scenario, run:
 </p>
@@ -92,12 +92,17 @@ This repository has a conflict in only one file; Git outputs:
       (use "git add &lt;file&gt;..." to mark resolution)
 
 
-            both modified:      gettysburg-address.txt
+            both modified:      gettysburg_address.txt
     ...
 </code></pre>
 
-<p>Examine file <code>gettysburg-address.txt</code>, in an editor or by running 
-<code>cat gettysburg-address.txt</code>.  It contains conflict markers (<code>&lt;&lt;&lt;&lt;&lt;&lt;&lt;</code>, <code>||||||||||</code>,  <code>==========</code>, <code>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;</code>) that show the locations of conflicts.  (The below shows line numbers for convenience; they are not in the actual file.)</p>
+<p>Examine file <code>gettysburg_address.txt</code>, in an editor or by running
+<code>cat gettysburg_address.txt</code>.  It contains conflict markers
+(<code>&lt;&lt;&lt;&lt;&lt;&lt;&lt;</code>, <code>||||||||||</code>,
+<code>==========</code>, <code>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;</code>)
+that show the locations of conflicts.
+The below shows line numbers for convenience; they are not in the actual file.
+</p>
 
 <pre><code>    1: Four score and seven years ago our fathers brought forth,
        &lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD
@@ -110,6 +115,18 @@ This repository has a conflict in only one file; Git outputs:
     3: dedicated to the proposition that all men are created equal.
     ...
 </code></pre>
+
+<p>
+(If your <code>gettysburg_address.txt</code> file contains only
+<code>&lt;&lt;&lt;&lt;&lt;&lt;&lt;</code>, <code>==========</code>,
+and <code>&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;&gt;</code> conflict markers, but
+no <code>||||||||||</code> conflict markers, then run <code>git config --global
+merge.conflictStyle zdiff3</code> (on every computer where you use git) and
+start the tutorial over, with a new clone of this repository.  The zdiff3
+conflict stuly shows not just the differences between the two parent commits of
+the conflict, but also the common ancestor of the two parents.  Knowing the
+common ancestor is often essential to resolving the merge conflict correctly.)
+</p>
 
 <p>Line 2 is in conflict, but lines 1 and 3 are not.</p>
 <ul>
@@ -144,7 +161,7 @@ You'll have to ensure that only one version of line 2 exists, and remove all of 
 
 <p>After saving a new, correct version of the file, add it to the <a href="http://gitready.com/beginner/2009/01/18/the-staging-area.html">staging area</a> and then <a href="http://git-scm.com/docs/git-commit">commit</a> it. For merge commits, Git proposes a default commit message.  You can accept the default, or you can write your own message. In this case, use the default message.</p>
 
-<pre><code>    $ git add gettysburg-address.txt
+<pre><code>    $ git add gettysburg_address.txt
     $ git commit 
     ...
 </code></pre>
